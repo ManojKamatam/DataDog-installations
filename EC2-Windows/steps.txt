@@ -1,0 +1,48 @@
+# Install the app:
+Start-Process -Wait msiexec -ArgumentList '/qn /i "https://s3.amazonaws.com/ddagent-windows-stable/datadog-agent-7-latest.amd64.msi" APIKEY="24d4fd9b038e72e2beaaec1cdf2ab844" SITE="datadoghq.com"'
+
+# Check DataDog agent is running
+Get-Service | Where-Object { $_.Name -like "*datadog*" } - Check datadog agent is running
+
+# Check status
+& "C:\Program Files\Datadog\Datadog Agent\bin\agent.exe" status
+logs not enabled
+
+# Enable the logs
+$yamlPath = "C:\ProgramData\Datadog\datadog.yaml"
+(Get-Content $yamlPath) -replace '# logs_enabled: false', 'logs_enabled: true' | Set-Content $yamlPath
+
+# Restart the service
+Restart-Service datadogagent -Force
+
+# Download the Tracer msi and install: Download it from # https://github.com/DataDog/dd-trace-dotnet/releases
+# Install the downloaded file
+Start-Process msiexec.exe -ArgumentList "/i C:\Users\Administrator\Downloads\datadog-dotnet-apm-3.10.1-x64.msi" –Wait
+
+# check status 
+ls "C:\Program Files\Datadog\.NET Tracer"
+Test-Path "C:\Program Files\Datadog\.NET Tracer“
+
+# Check the DD_TRACE enabled or not
+Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" | Select-Object DD_TRACE_ENABLED, DD_AGENT_HOST, DD_SERVICE
+
+# Give env variables
+[System.Environment]::SetEnvironmentVariable("DD_TRACE_ENABLED", "true", "Machine")
+[System.Environment]::SetEnvironmentVariable("DD_AGENT_HOST", "localhost", "Machine")
+[System.Environment]::SetEnvironmentVariable("DD_SERVICE", "dotnet-app", "Machine")
+[System.Environment]::SetEnvironmentVariable("DD_ENV", "production", "Machine")
+[System.Environment]::SetEnvironmentVariable("DD_LOGS_INJECTION", "true", "Machine")
+[System.Environment]::SetEnvironmentVariable("DD_TRACE_DEBUG", "true", "Machine")
+[System.Environment]::SetEnvironmentVariable("DD_DOTNET_TRACER_HOME", "C:\Program Files\Datadog\.NET Tracer", "Machine")
+[System.Environment]::SetEnvironmentVariable("COR_ENABLE_PROFILING", "1", "Machine")
+[System.Environment]::SetEnvironmentVariable("COR_PROFILER", "{846F5F1C-F9AE-4B07-969E-05C26BC060D8}", "Machine")
+[System.Environment]::SetEnvironmentVariable("COR_PROFILER_PATH_32", "C:\Program Files\Datadog\.NET Tracer\win-x86\Datadog.Trace.ClrProfiler.Native.dll", "Machine")
+[System.Environment]::SetEnvironmentVariable("COR_PROFILER_PATH_64", "C:\Program Files\Datadog\.NET Tracer\win-x64\Datadog.Trace.ClrProfiler.Native.dll", "Machine")
+
+# Confirm
+Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" | Select-Object DD_TRACE_ENABLED, DD_AGENT_HOST, DD_SERVICE
+
+# Restart Agent and IIS as well, IISRESET is mandatory as app is inside iis
+Restart-Service datadogagent -Force
+iisreset
+
