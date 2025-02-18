@@ -46,3 +46,5 @@ Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\E
 Restart-Service datadogagent -Force
 iisreset
 
+# Check traces
+Get-Content "C:\ProgramData\Datadog\logs\trace-agent.log" | Select-String "traces received"
